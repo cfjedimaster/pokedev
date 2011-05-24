@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="PokeDev V1.0" viewActivate="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+	<![CDATA[
+		
+	//Interval is the number of seconds between state change	
+	private var INTERVAL:int = 10;
+	//current happiness level
+	private var HAPPY:int = 10;
+	//max level of happiness
+	private var MAXHAPPY:int = 10;
+
+	//main timer for the creature	
+	private var heartBeat:Timer;
+	
+	[Embed(source="pictures/dead.jpg")]
+	[Bindable]
+	private var deadPic:Class;
+
+	[Embed(source="pictures/veryunhappy.jpg")]
+	[Bindable]
+	private var veryunhappyPic:Class;
+
+	[Embed(source="pictures/unhappy.jpg")]
+	[Bindable]
+	private var unhappyPic:Class;
+
+	[Embed(source="pictures/neutral.jpg")]
+	[Bindable]
+	private var neutralPic:Class;
+
+	[Embed(source="pictures/happy.jpg")]
+	[Bindable]
+	private var happyPic:Class;
+
+	[Embed(source="pictures/veryhappy.jpg")]
+	[Bindable]
+	private var veryhappyPic:Class;
+
+	[Embed(source="pictures/perfect.jpg")]
+	[Bindable]
+	private var perfectPic:Class;
+
+
+	private function init():void {
+
+		if(data != null) {
+			trace("data exists...");
+			//determine how many intervals between now and last run
+			HAPPY = data.HAPPY;
+			trace("Last run at "+data.lastrun+ " and it is now "+new Date());
+			//how many seconds since last run - we only care if not dead
+			if(HAPPY >= 1) {
+				//http://jbablog.com/2008/04/actionscript-2-datediff-function/
+				var seconds:Number = (new Date().getTime() - new Date(data.lastrun).getTime())/1000;
+				trace(seconds + " seconds since last run.");
+				//so the number of times we decrease hunger is seconds/interval
+				var intervals:Number = Math.floor(seconds/INTERVAL);
+				trace("there were "+intervals+ " intervals since last run");
+				HAPPY -= intervals;
+				trace("so happy is now at "+HAPPY);
+				if(HAPPY <= 0) currentState="dead";
+			}			
+		} else data = {};
+		drawPicture();
+		heartBeat = new Timer(INTERVAL*1000);
+		heartBeat.addEventListener(TimerEvent.TIMER,doHeartBeat);
+		heartBeat.start();
+	}
+
+	private function persist():void {
+		data.HAPPY = HAPPY;
+		data.lastrun = new Date();
+		trace("Stored lastrun as "+data.lastrun);
+	}
+		
+	private function doHeartBeat(evt:TimerEvent):void {
+		HAPPY--;
+		persist();
+		trace("Happy at heart beat: "+HAPPY);
+		if(HAPPY <= 0) {
+			currentState="dead";
+			heartBeat.stop();
+		} else drawPicture();
+	}
+
+	private function drawPicture():void {
+		//based on HAPPY level we do a different image
+		switch(HAPPY) {
+			case 10: 
+				mainImage.source=perfectPic;
+				break;
+			case 9:
+			case 8:
+				mainImage.source=veryhappyPic;
+				break;
+			case 7:
+			case 6:
+				mainImage.source=happyPic;
+				break;
+			case 5:
+				mainImage.source=neutralPic;
+				break;
+			case 4:
+			case 3:
+				mainImage.source=unhappyPic;
+				break;
+			case 2:
+			case 1:
+				mainImage.source=veryunhappyPic;
+				break;
+			case 0:
+				mainImage.source=deadPic;
+				break;
+		}
+		
+	}
+
+	private function feed(event:MouseEvent):void {
+		if(HAPPY < MAXHAPPY) HAPPY++;
+		persist();
+		drawPicture();
+		trace("Happy after feeding: "+HAPPY);
+	}
+	
+	private function startOver(event:MouseEvent):void {
+		currentState="normal";
+		HAPPY = MAXHAPPY;
+		persist();
+		drawPicture();
+		heartBeat.start();
+	}
+	]]>
+	</fx:Script>
+
+	<s:states>
+		<s:State name="normal" />
+		<s:State name="dead" />
+	</s:states>
+	
+	<s:layout>
+		<s:VerticalLayout verticalAlign="top" />
+	</s:layout>
+
+	<!-- These are the normal views -->
+	<s:Image id="mainImage" width="100%" height="100%" includeIn="normal" />
+	<s:Button id="feedButton" label="Feed the Developer" width="100%" click="feed(event)" includeIn="normal" />	
+
+	<s:Image id="deadImage" width="100%" height="100%" includeIn="dead" source="{deadPic}" />
+	<s:Button id="soButton" label="Start Over" width="100%" click="startOver(event)" includeIn="dead" />	
+
+</s:View>
